@@ -141,7 +141,7 @@ function initLevel(levelIndex) {
     train.requestedDx = 1; // Initial requested direction right
     train.requestedDy = 0; // Initial requested direction right
     gameOver = false;
-    score = 0;
+    gameStarted = false;
     train.headAsset = assets['LOKOMOT'][2]; // Set initial head asset to right-facing locomotive
 }
 
