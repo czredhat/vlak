@@ -24,7 +24,7 @@ const TILE_TO_ASSET_MAP = {
     ZED: 'ZED', VRA: 'VRATA', KRY: 'KRYSTAL', STO: 'STROM', JAB: 'JABLKO', KRA: 'KRAVA',
     TRE: 'TRESNE', RYB: 'RYBNIK', ZIR: 'ZIRAFA', ZMR: 'ZMRZLIN', DOR: 'DORT', POC: 'POCITAC',
     AUT: 'AUTO', BAL: 'BALON', BUD: 'BUDIK', SLO: 'SLON', VIN: 'VINO', PEN: 'PENIZE',
-    LET: 'LETADLO', KOR: 'KORUNA', LOKOMOT: 'LOKOMOT'
+    LET: 'LETADLO', KOR: 'KORUNA', LOKOMOT: 'LOKOMOT', SRAZKA: 'SRAZKA'
 };
 
 // --- Načítání obrázků ---
@@ -62,6 +62,8 @@ function loadAssets(callback) {
         let key;
         if (name.startsWith('KORUNA')) {
             key = 'KORUNA';
+        } else if (name.startsWith('SRAZKA')) {
+            key = 'SRAZKA';
         } else {
             key = name.replace(/\d+$|[A-C]$/, '');
         }
@@ -72,13 +74,13 @@ function loadAssets(callback) {
     for (const key in assetOrder) {
         assetOrder[key].sort((a, b) => {
             let numA, numB;
-            if (a.startsWith('KORUNA')) {
-                numA = parseInt(a.replace('KORUNA', ''));
+            if (a.startsWith('KORUNA') || a.startsWith('SRAZKA')) {
+                numA = parseInt(a.replace('KORUNA', '').replace('SRAZKA', ''));
             } else {
                 numA = parseInt(a.match(/[0-9A-C]+$/)[0].replace('A', '10').replace('B', '11').replace('C', '12'));
             }
-            if (b.startsWith('KORUNA')) {
-                numB = parseInt(b.replace('KORUNA', ''));
+            if (b.startsWith('KORUNA') || a.startsWith('SRAZKA')) {
+                numB = parseInt(b.replace('KORUNA', '').replace('SRAZKA', ''));
             } else {
                 numB = parseInt(b.match(/[0-9A-C]+$/)[0].replace('A', '10').replace('B', '11').replace('C', '12'));
             }
@@ -91,6 +93,8 @@ function loadAssets(callback) {
         const assetKey = (() => {
             if (name.startsWith('KORUNA')) {
                 return 'KORUNA';
+            } else if (name.startsWith('SRAZKA')) {
+                return 'SRAZKA';
             } else {
                 return name.replace(/\d+$|[A-C]$/, '');
             }
@@ -117,6 +121,7 @@ let gateState = 'closed'; // new: 'closed', 'opening', 'open'
 let gameStarted = false;
 let gameTick = 0;
 let gateAnimationStartFrame = -1;
+let explosionStartFrame = -1;
 
 function initLevel(levelIndex) {
     const levelData = levels[levelIndex];
@@ -239,7 +244,16 @@ function drawTrain() {
         }
     });
 
-    if (train.headAsset) {
+    if (gameOver && explosionStartFrame !== -1) {
+        const explosionAssets = assets['SRAZKA'];
+        const frameCount = explosionAssets.length; // SRAZKA1-SRAZKAA (10 frames)
+        const animationProgress = animationFrame - explosionStartFrame;
+        const frameIndex = Math.min(Math.floor(animationProgress * 2), frameCount - 1);
+        const img = explosionAssets[frameIndex];
+        if (img) {
+            ctx.drawImage(img, train.x * TILE_SIZE, train.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        }
+    } else if (train.headAsset) {
         ctx.drawImage(train.headAsset, train.x * TILE_SIZE, train.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
 }
@@ -260,7 +274,9 @@ function update() {
     const nextY = train.y + train.dy;
 
     if (nextY < 0 || nextY >= MAP_ROWS || nextX < 0 || nextX >= MAP_COLS) {
-        gameOver = true; return;
+        gameOver = true;
+        explosionStartFrame = animationFrame;
+        return;
     }
 
     const levelData = levels[currentLevel];
@@ -268,14 +284,18 @@ function update() {
 
     // Kolize POUZE se zdí
     if (nextTile === TILES.ZED) {
-        gameOver = true; return;
+        gameOver = true;
+        explosionStartFrame = animationFrame;
+        return;
     }
 
     // Kolize se sebou samým
     for (let i = 0; i < train.wagons.length; i++) {
         const partPos = train.path[i];
         if (partPos && partPos.x === nextX && partPos.y === nextY) {
-            gameOver = true; return;
+            gameOver = true;
+            explosionStartFrame = animationFrame;
+            return;
         }
     }
 
@@ -320,7 +340,9 @@ function update() {
             }
             return; // Level changed, so stop further processing for this frame
         } else {
-            gameOver = true; return; // Collision with closed gate
+            gameOver = true;
+            explosionStartFrame = animationFrame;
+            return; // Collision with closed gate
         }
     }
 }
