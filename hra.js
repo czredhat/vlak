@@ -98,7 +98,7 @@ function loadAssets(callback) {
 }
 
 // --- Herní stav ---
-let currentLevel = 0;
+let currentLevel = 2;
 let currentLevelData = [];
 let train = { x: 0, y: 0, dx: 1, dy: 0, requestedDx: 1, requestedDy: 0, path: [], wagons: [], headAsset: null };
 let gameOver = false;
