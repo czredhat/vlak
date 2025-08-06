@@ -1,4 +1,3 @@
-
 // Základní kostra pro hru Vlak
 console.log("Hra Vlak se načítá...");
 
@@ -6,13 +5,14 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 // Zde budou definice velikosti hry a další konstanty
-const TILE_SIZE = 48; // Předpokládaná velikost dlaždice
+const TILE_SIZE = 48; // Zvětšená velikost dlaždice
 const MAP_COLS = 20;
 const MAP_ROWS = 12;
 
 canvas.width = TILE_SIZE * MAP_COLS;
 canvas.height = TILE_SIZE * MAP_ROWS;
 
+// Mapování z interního názvu dlaždice na název assetu
 const TILE_TO_ASSET_MAP = {
     ZED: 'ZED',
     VRA: 'VRATA',
@@ -36,27 +36,6 @@ const TILE_TO_ASSET_MAP = {
     LOKOMOT: 'LOKOMOT'
 };
 
-// Mapping from TILES value to the base asset name for wagons
-const WAGON_ASSET_MAP = {
-    [TILES.JAB]: 'JABLKO',
-    [TILES.KRA]: 'KRAVA',
-    [TILES.TRE]: 'TRESNE',
-    [TILES.RYB]: 'RYBNIK',
-    [TILES.ZIR]: 'ZIRAFA',
-    [TILES.ZMR]: 'ZMRZLIN',
-    [TILES.DOR]: 'DORT',
-    [TILES.POC]: 'POCITAC',
-    [TILES.AUT]: 'AUTO',
-    [TILES.BAL]: 'BALON',
-    [TILES.BUD]: 'BUDIK',
-    [TILES.SLO]: 'SLON',
-    [TILES.VIN]: 'VINO',
-    [TILES.PEN]: 'PENIZE',
-    [TILES.LET]: 'LETADLO',
-};
-
-
-
 // --- Načítání obrázků ---
 const assets = {};
 const assetNames = [
@@ -64,7 +43,7 @@ const assetNames = [
     'BALON1', 'BALON2', 'BALON3', 'BALON4', 'BALON5', 'BALON6', 'BALON7',
     'BUDIK1', 'BUDIK2', 'BUDIK3', 'BUDIK4', 'BUDIK5', 'BUDIK6', 'BUDIK7',
     'DORT1', 'DORT2', 'DORT3', 'DORT4', 'DORT5', 'DORT6', 'DORT7',
-    'JABLKO1', 'JABLKO2', 'JABLKO3', 'JABLKO4', 'JABLKO5', 'JABLKO6', 'JABLKO7',
+    'JABLKO1', 'JABLKO2', 'JABLKO3',
     'KORUNA1', 'KORUNA2', 'KORUNA3', 'KORUNA4', 'KORUNA5', 'KORUNA6', 'KORUNA7',
     'KRAVA1', 'KRAVA2', 'KRAVA3', 'KRAVA4', 'KRAVA5', 'KRAVA6', 'KRAVA7',
     'KRYSTAL1', 'KRYSTAL2', 'KRYSTAL3', 'KRYSTAL4', 'KRYSTAL5', 'KRYSTAL6', 'KRYSTAL7',
@@ -72,12 +51,12 @@ const assetNames = [
     'LOKOMOT1', 'LOKOMOT2', 'LOKOMOT3', 'LOKOMOT4', 'LOKOMOT5', 'LOKOMOT6', 'LOKOMOT7', 'LOKOMOT8', 'LOKOMOT9', 'LOKOMOTA', 'LOKOMOTB', 'LOKOMOTC',
     'PENIZE1', 'PENIZE2', 'PENIZE3', 'PENIZE4', 'PENIZE5', 'PENIZE6', 'PENIZE7',
     'POCITAC1', 'POCITAC2', 'POCITAC3', 'POCITAC4', 'POCITAC5', 'POCITAC6', 'POCITAC7',
-    'RYBNIK1', 'RYBNIK2', 'RYBNIK3', 'RYBNIK4', 'RYBNIK5', 'RYBNIK6', 'RYBNIK7',
+    'RYBNIK1', 'RYBNIK2', 'RYBNIK3',
     'SLON1', 'SLON2', 'SLON3', 'SLON4', 'SLON5', 'SLON6', 'SLON7',
     'SRAZKA1', 'SRAZKA2', 'SRAZKA3', 'SRAZKA4', 'SRAZKA5', 'SRAZKA6', 'SRAZKA7', 'SRAZKA8', 'SRAZKA9', 'SRAZKAA',
     'STROM1', 'STROM2', 'STROM3', 'STROM4', 'STROM5', 'STROM6', 'STROM7',
     'TITULEK',
-    'TRESNE1', 'TRESNE2', 'TRESNE3', 'TRESNE4', 'TRESNE5', 'TRESNE6', 'TRESNE7',
+    'TRESNE1', 'TRESNE2', 'TRESNE3',
     'VINO1', 'VINO2', 'VINO3', 'VINO4', 'VINO5', 'VINO6', 'VINO7',
     'VRATA1', 'VRATA2', 'VRATA3', 'VRATA4', 'VRATA5', 'VRATA6',
     'ZED',
@@ -87,19 +66,30 @@ const assetNames = [
 
 let assetsLoaded = 0;
 function loadAssets(callback) {
+    // Vytvoříme mapu pro seřazení obrázků, aby se zachovalo pořadí 1-9, A, B, C
+    const assetOrder = {};
+
     assetNames.forEach(name => {
-        // First, get a base key by removing trailing numbers.
-        let assetKey = name.replace(/[0-9]/g, '');
-
-        // This isn't enough for assets using letters in their sequence (LOKOMOTA, SRAZKAA, etc.).
-        // We add specific rules for these known cases.
-        if (assetKey.startsWith('LOKOMOT') && assetKey.length > 7) {
-            assetKey = 'LOKOMOT';
+        const key = name.replace(/[0-9A-C]+$/, '');
+        if (!assetOrder[key]) {
+            assetOrder[key] = [];
         }
-        if (assetKey.startsWith('SRAZKA') && assetKey.length > 6) {
-            assetKey = 'SRAZKA';
-        }
+        assetOrder[key].push(name);
+    });
 
+    // Seřadíme názvy souborů pro každý klíč
+    for (const key in assetOrder) {
+        assetOrder[key].sort((a, b) => {
+            const numA = parseInt(a.match(/[0-9A-C]+$/)[0].replace('A', '10').replace('B', '11').replace('C', '12'));
+            const numB = parseInt(b.match(/[0-9A-C]+$/)[0].replace('A', '10').replace('B', '11').replace('C', '12'));
+            return numA - numB;
+        });
+    }
+
+    const sortedAssetNames = [].concat(...Object.values(assetOrder));
+
+    sortedAssetNames.forEach(name => {
+        const assetKey = name.replace(/[0-9A-C]+$/, '');
         if (!assets[assetKey]) {
             assets[assetKey] = [];
         }
@@ -107,13 +97,15 @@ function loadAssets(callback) {
         img.src = `assets/${name}.png`;
         img.onload = () => {
             assetsLoaded++;
-            if (assetsLoaded === assetNames.length) {
+            if (assetsLoaded === sortedAssetNames.length) {
+                console.log("Všechny obrázky načteny a seřazeny.");
                 callback();
             }
         };
         assets[assetKey].push(img);
     });
 }
+
 
 // --- Herní stav ---
 let currentLevel = 0;
@@ -122,8 +114,9 @@ let train = {
     y: 0,
     dx: 1,
     dy: 0,
-    body: [],
-    length: 5
+    path: [], // Historie pozic hlavy vlaku [{x, y}, {x, y}, ...]
+    wagons: [], // Seznam typů vagónů ['STROM', 'KRAVA', ...]
+    headAsset: null
 };
 let gameOver = false;
 let score = 0;
@@ -134,7 +127,7 @@ let gateAnimationCounter = 0;
 
 function initLevel(levelIndex) {
     const levelData = levels[levelIndex];
-    itemsToCollect = 0; // Reset item counter
+    itemsToCollect = 0;
     gateFrame = 0;
     gateAnimationCounter = 0;
 
@@ -147,12 +140,12 @@ function initLevel(levelIndex) {
             if (tile >= TILES.LO1 && tile <= TILES.LOC) {
                 train.x = col;
                 train.y = row;
-                levelData[row][col] = 0; // Remove train from map data
+                levelData[row][col] = 0; // Odstraníme vlak z mapy
             }
         }
     }
-    train.body = [];
-    train.length = 1; // Start with just the locomotive head
+    train.wagons = [];
+    train.path = [];
     train.dx = 1;
     train.dy = 0;
     gameOver = false;
@@ -189,14 +182,10 @@ function drawMap() {
                     const assetGroup = assets[assetKey];
                     if (assetGroup && assetGroup.length > 0) {
                         let img;
-                        if (tile === TILES.VRA) { // Handle gate animation separately
+                        if (tile === TILES.VRA) {
                             img = assetGroup[gateFrame];
                         } else {
-                            let frameCount = assetGroup.length;
-                            // Heuristika pro standardní animované předměty (3 snímky animace + 4 pro vagóny)
-                            if (assetGroup.length === 7) {
-                                frameCount = 3;
-                            }
+                            let frameCount = assetGroup.length >= 3 ? 3 : assetGroup.length;
                             const frameIndex = animationFrame % frameCount;
                             img = assetGroup[frameIndex];
                         }
@@ -209,23 +198,35 @@ function drawMap() {
 }
 
 function drawTrain() {
-    // Draw body
-    train.body.forEach(part => {
-        let asset;
-        if (part.type !== 0) {
-            const assetKey = WAGON_ASSET_MAP[part.type];
-            if (assetKey && assets[assetKey] && assets[assetKey].length >= 4) {
-                asset = assets[assetKey][3]; // Use the 4th frame (index 3) for the wagon body
-            } else {
-                asset = assets['LOKOMOT'][1]; // Fallback to default lokomotiva body
+    // Vykreslení vagónů
+    train.wagons.forEach((wagonType, index) => {
+        // Pozice pro vagón na indexu `index` je uložena v `path[index]`.
+        if (index < train.path.length) {
+            const currentPos = train.path[index];
+
+            // Segment před tímto vagónem určuje jeho směr.
+            // Pro první vagón (index 0) je to hlava vlaku.
+            // Pro další vagóny je to vagón na `index - 1`, jehož pozice je `path[index - 1]`.
+            const prevPos = (index === 0) ? { x: train.x, y: train.y } : train.path[index - 1];
+
+            const dx = prevPos.x - currentPos.x;
+            const dy = prevPos.y - currentPos.y;
+
+            let assetIndex = 3; // Default: doprava
+            if (dx === 1) assetIndex = 3;      // Doprava (frame 4)
+            else if (dx === -1) assetIndex = 5; // Doleva (frame 6)
+            else if (dy === 1) assetIndex = 4;  // Dolů (frame 5)
+            else if (dy === -1) assetIndex = 6; // Nahoru (frame 7)
+
+            const wagonAssetGroup = assets[wagonType];
+            if (wagonAssetGroup && wagonAssetGroup.length > assetIndex) {
+                const img = wagonAssetGroup[assetIndex];
+                ctx.drawImage(img, currentPos.x * TILE_SIZE, currentPos.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
             }
-        } else {
-            asset = assets['LOKOMOT'][1]; // Default lokomotiva body if no item was collected
         }
-        ctx.drawImage(asset, part.x * TILE_SIZE, part.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     });
 
-    // Draw head
+    // Vykreslení hlavy
     if (train.headAsset) {
         ctx.drawImage(train.headAsset, train.x * TILE_SIZE, train.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
@@ -241,78 +242,87 @@ function drawScore() {
 function update() {
     if (gameOver) return;
 
-    // Calculate potential next position
+    // Uložíme aktuální pozici hlavy, než se pohne
+    const lastPos = { x: train.x, y: train.y };
+
+    // Vypočítáme další pozici
     const nextX = train.x + train.dx;
     const nextY = train.y + train.dy;
 
-    // Collision detection for the *next* tile
-    const levelData = levels[currentLevel];
-    // Check bounds first to prevent errors accessing levelData[nextY][nextX]
+    // Detekce kolize s okrajem
     if (nextY < 0 || nextY >= MAP_ROWS || nextX < 0 || nextX >= MAP_COLS) {
-        gameOver = true; // Collision with border
+        gameOver = true;
         return;
     }
-    const nextTile = levelData[nextY][nextX];
 
-    // Wall collision
+    // Detekce kolize se zdí, stromem, rybníkem
+    const levelData = levels[currentLevel];
+    const nextTile = levelData[nextY][nextX];
     if (nextTile === TILES.ZED || nextTile === TILES.STO || nextTile === TILES.RYB) {
         gameOver = true;
         return;
     }
 
-    // Self collision (check against existing body parts *before* moving the head)
-    for (let i = 0; i < train.body.length; i++) {
-        const part = train.body[i];
-        if (part.x === nextX && part.y === nextY) {
+    // Detekce kolize se sebou samým (s vagóny)
+    for (let i = 0; i < train.wagons.length; i++) {
+        const partPos = train.path[i];
+        if (partPos && partPos.x === nextX && partPos.y === nextY) {
             gameOver = true;
             return;
         }
     }
+    
+    // Přidáme starou pozici hlavy na začátek historie cesty
+    train.path.unshift(lastPos);
 
-    // Determine collected item type and update train length
-    let collectedItemType = 0;
-    if (nextTile >= TILES.JAB && nextTile <= TILES.LET) {
-        collectedItemType = nextTile;
-        train.length++; // Increase length only when an item is collected
-        score += 10;
-        itemsToCollect--;
-        levelData[nextY][nextX] = 0; // Remove item from map
-    } else if (nextTile === TILES.KRY) { // Crystal collection
-        score += 50;
-        levelData[nextY][nextX] = 0; // Remove crystal from map
+    // Omezíme délku historie cesty na počet vagónů
+    while (train.path.length > train.wagons.length) {
+        train.path.pop();
     }
 
-    // Update train head position
+    // Sběr předmětů
+    if (nextTile >= TILES.JAB && nextTile <= TILES.LET) {
+        let tileName = Object.keys(TILES).find(key => TILES[key] === nextTile);
+        const assetKey = TILE_TO_ASSET_MAP[tileName.replace(/[0-9]/g, '')];
+        
+        if (assets[assetKey] && assets[assetKey].length >= 7) {
+            train.wagons.push(assetKey); // Přidá specifický vagón
+        } else {
+            train.wagons.push('STROM'); // Přidá defaultní vagón
+        }
+
+        score += 10;
+        itemsToCollect--;
+        levelData[nextY][nextX] = 0; // Odstraní předmět z mapy
+    } else if (nextTile === TILES.KRY) {
+        train.wagons.push('KRYSTAL');
+        score += 50;
+        levelData[nextY][nextX] = 0;
+    }
+
+    // Aktualizujeme pozici hlavy
     train.x = nextX;
     train.y = nextY;
 
-    // Add new head segment to body
-    train.body.unshift({ x: train.x, y: train.y, type: collectedItemType });
-
-    // Remove oldest segment if train is not growing (or shrinking)
-    while (train.body.length > train.length) {
-        train.body.pop();
-    }
-
-    // Level complete
+    // Dokončení levelu
     if (nextTile === TILES.VRA) {
-        if (gateFrame < 5) { // Gate is not fully open
+        if (gateFrame < 5) {
             gameOver = true;
             return;
         }
         currentLevel++;
         if (currentLevel >= levels.length) {
             gameOver = true;
-            alert('You win!');
+            alert('Vyhrál jsi!');
         } else {
             initLevel(currentLevel);
         }
     }
 
-    // Gate animation
+    // Animace brány
     if (itemsToCollect === 0 && gateFrame < 5) {
         gateAnimationCounter++;
-        if (gateAnimationCounter % 5 === 0) { // Slow down gate animation
+        if (gateAnimationCounter % 5 === 0) {
             gateFrame++;
         }
     }
@@ -322,29 +332,29 @@ function gameLoop() {
     animationFrame++;
     update();
 
-    // Select the correct head asset based on direction and animation frame
+    // Výběr správného obrázku pro hlavu lokomotivy
     const frameIndex = animationFrame % 3;
     const lokomotAssets = assets['LOKOMOT'];
     let nextHeadAsset;
 
-    if (train.dx === 1) { // Right
+    if (train.dx === 1) { // Doprava
         const rightFrames = [lokomotAssets[2], lokomotAssets[6], lokomotAssets[10]];
         nextHeadAsset = rightFrames[frameIndex];
-    } else if (train.dx === -1) { // Left
+    } else if (train.dx === -1) { // Doleva
         const leftFrames = [lokomotAssets[0], lokomotAssets[4], lokomotAssets[8]];
         nextHeadAsset = leftFrames[frameIndex];
-    } else if (train.dy === -1) { // Up
+    } else if (train.dy === -1) { // Nahoru
         const upFrames = [lokomotAssets[1], lokomotAssets[5], lokomotAssets[9]];
         nextHeadAsset = upFrames[frameIndex];
-    } else if (train.dy === 1) { // Down
+    } else if (train.dy === 1) { // Dolů
         const downFrames = [lokomotAssets[3], lokomotAssets[7], lokomotAssets[11]];
         nextHeadAsset = downFrames[frameIndex];
     }
-
     if (nextHeadAsset) {
         train.headAsset = nextHeadAsset;
     }
 
+    // Vykreslení
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -356,7 +366,8 @@ function gameLoop() {
     if (gameOver) {
         ctx.fillStyle = 'white';
         ctx.font = '120px Arial';
-        ctx.fillText('Game Over', canvas.width / 2 - 300, canvas.height / 2);
+        ctx.textAlign = 'center';
+        ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2);
     }
 
     setTimeout(gameLoop, 1000 / 5); // 5 FPS
@@ -364,7 +375,6 @@ function gameLoop() {
 
 // --- Hlavní funkce ---
 function main() {
-    console.log("Všechny obrázky načteny, startuji hru.");
     initLevel(currentLevel);
     gameLoop();
 }
