@@ -100,7 +100,6 @@ function loadAssets(callback) {
         img.src = `assets/${name}.png`;
         img.onload = () => {
             assetsLoaded++;
-            console.log(`Loaded ${name}.png, assetKey: ${assetKey}`);
             if (assetsLoaded === sortedAssetNames.length) callback();
         };
         assets[assetKey].push(img);
@@ -108,7 +107,7 @@ function loadAssets(callback) {
 }
 
 // --- Herní stav ---
-let currentLevel = 0;
+let currentLevel = 6;
 let train = { x: 0, y: 0, dx: 1, dy: 0, path: [], wagons: [], headAsset: null };
 let gameOver = false;
 let score = 0;
@@ -116,12 +115,14 @@ let animationFrame = 0;
 let itemsToCollect = 0;
 let gateFrame = 0;
 let gateAnimationCounter = 0;
+let gateState = 'closed'; // new: 'closed', 'opening', 'open'
 
 function initLevel(levelIndex) {
     const levelData = levels[levelIndex];
     itemsToCollect = 0;
     gateFrame = 0;
     gateAnimationCounter = 0;
+    gateState = 'closed';
 
     for (let row = 0; row < MAP_ROWS; row++) {
         for (let col = 0; col < MAP_COLS; col++) {
@@ -133,9 +134,14 @@ function initLevel(levelIndex) {
                 train.x = col;
                 train.y = row;
                 levelData[row][col] = 0;
+                // If the train starts on a collectible tile, decrement itemsToCollect
+                if (tile > TILES.VRA) {
+                    itemsToCollect--;
+                }
             }
         }
     }
+    console.log(`initLevel: itemsToCollect initialized to ${itemsToCollect}`);
     train.wagons = [];
     train.path = [];
     train.dx = 1;
@@ -173,9 +179,6 @@ function drawMap() {
             if (!assetKey) continue; // Skip if no asset is mapped
 
             const assetGroup = assets[assetKey];
-            if (assetKey === 'KORUNA') {
-                console.log(`Drawing KORUNA: tile=${tile}, tileName=${tileName}, assetKey=${assetKey}, assetGroup=${assetGroup ? 'exists' : 'does not exist'}, assetGroup.length=${assetGroup ? assetGroup.length : 'N/A'}`);
-            }
             if (assetGroup && assetGroup.length > 0) {
                 let img;
                 if (tile === TILES.VRA) {
@@ -274,21 +277,40 @@ function update() {
         score += 10;
         itemsToCollect--;
         levelData[nextY][nextX] = 0;
+        console.log(`Item collected. itemsToCollect: ${itemsToCollect}`);
+
+        if (itemsToCollect === 0 && gateState === 'closed') {
+            console.log('All items collected, starting gate opening animation.');
+            gateState = 'opening';
+        }
     }
 
     train.x = nextX;
     train.y = nextY;
 
+    // Handle gate collision
     if (nextTile === TILES.VRA) {
-        if (itemsToCollect > 0) { // Brána se otevře, až když je vše sebráno
-             gameOver = true; return;
-        }
-        currentLevel++;
-        if (currentLevel >= levels.length) {
-            gameOver = true;
-            alert('Vyhrál jsi!');
+        console.log(`Train hit gate. itemsToCollect: ${itemsToCollect}, gateState: ${gateState}`);
+        if (gateState !== 'open') {
+            gameOver = true; return; // Collision with closed or opening gate
         } else {
-            initLevel(currentLevel);
+            // Train can pass through open gate
+            currentLevel++;
+            if (currentLevel >= levels.length) {
+                gameOver = true;
+                alert('Vyhrál jsi!');
+            } else {
+                initLevel(currentLevel);
+            }
+            return; // Level changed, so stop further processing for this frame
+        }
+    }
+
+    // Gate animation logic
+    if (gateState === 'opening') {
+        gateFrame++;
+        if (gateFrame >= 5) { // VRATA6 is index 5 (VRATA1 is index 0)
+            gateState = 'open';
         }
     }
 }
