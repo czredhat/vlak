@@ -116,6 +116,7 @@ let itemsToCollect = 0;
 let gateFrame = 0;
 let gateAnimationCounter = 0;
 let gateState = 'closed'; // new: 'closed', 'opening', 'open'
+let gameStarted = false;
 
 function initLevel(levelIndex) {
     const levelData = levels[levelIndex];
@@ -141,21 +142,31 @@ function initLevel(levelIndex) {
             }
         }
     }
-    console.log(`initLevel: itemsToCollect initialized to ${itemsToCollect}`);
     train.wagons = [];
     train.path = [];
-    train.dx = 1;
+    train.dx = 0;
     train.dy = 0;
     gameOver = false;
     score = 0;
+    train.headAsset = assets['LOKOMOT'][2]; // Set initial head asset to right-facing locomotive
 }
 
 // --- Ovládání ---
 document.addEventListener('keydown', e => {
+    if (gameOver) return; // Prevent movement if game is over
+
+    const oldDx = train.dx;
+    const oldDy = train.dy;
+
     if (e.key === 'ArrowUp' && train.dy === 0) { train.dx = 0; train.dy = -1; }
     else if (e.key === 'ArrowDown' && train.dy === 0) { train.dx = 0; train.dy = 1; }
     else if (e.key === 'ArrowLeft' && train.dx === 0) { train.dx = -1; train.dy = 0; }
     else if (e.key === 'ArrowRight' && train.dx === 0) { train.dx = 1; train.dy = 0; }
+
+    // If direction changed, start the game
+    if (!gameStarted && (train.dx !== oldDx || train.dy !== oldDy)) {
+        gameStarted = true;
+    }
 });
 
 // --- Vykreslování ---
@@ -233,6 +244,7 @@ function drawScore() {
 // --- Herní smyčka ---
 function update() {
     if (gameOver) return;
+    if (!gameStarted) return; // Stop train movement if game hasn't started
 
     const lastPos = { x: train.x, y: train.y };
     const nextX = train.x + train.dx;
@@ -277,10 +289,8 @@ function update() {
         score += 10;
         itemsToCollect--;
         levelData[nextY][nextX] = 0;
-        console.log(`Item collected. itemsToCollect: ${itemsToCollect}`);
 
         if (itemsToCollect === 0 && gateState === 'closed') {
-            console.log('All items collected, starting gate opening animation.');
             gateState = 'opening';
         }
     }
@@ -290,7 +300,6 @@ function update() {
 
     // Handle gate collision
     if (nextTile === TILES.VRA) {
-        console.log(`Train hit gate. itemsToCollect: ${itemsToCollect}, gateState: ${gateState}`);
         if (gateState !== 'open') {
             gameOver = true; return; // Collision with closed or opening gate
         } else {
@@ -322,7 +331,7 @@ function gameLoop() {
     const frameIndex = animationFrame % 3;
     const lokomotAssets = assets['LOKOMOT'];
     let nextHeadAsset;
-    if (train.dx === 1) { nextHeadAsset = [lokomotAssets[2], lokomotAssets[6], lokomotAssets[10]][frameIndex]; }
+    if (train.dx === 1 || (train.dx === 0 && train.dy === 0)) { nextHeadAsset = [lokomotAssets[2], lokomotAssets[6], lokomotAssets[10]][frameIndex]; }
     else if (train.dx === -1) { nextHeadAsset = [lokomotAssets[0], lokomotAssets[4], lokomotAssets[8]][frameIndex]; }
     else if (train.dy === -1) { nextHeadAsset = [lokomotAssets[1], lokomotAssets[5], lokomotAssets[9]][frameIndex]; }
     else if (train.dy === 1) { nextHeadAsset = [lokomotAssets[3], lokomotAssets[7], lokomotAssets[11]][frameIndex]; }
