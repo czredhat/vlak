@@ -17,7 +17,7 @@ const MAP_COLS = 20;
 const MAP_ROWS = 12;
 
 canvas.width = TILE_SIZE * MAP_COLS;
-canvas.height = TILE_SIZE * MAP_ROWS;
+canvas.height = (TILE_SIZE * MAP_ROWS) + 80;
 
 // Mapování z interního názvu dlaždice na název assetu
 const TILE_TO_ASSET_MAP = {
@@ -72,20 +72,7 @@ function loadAssets(callback) {
     });
 
     for (const key in assetOrder) {
-        assetOrder[key].sort((a, b) => {
-            let numA, numB;
-            if (a.startsWith('KORUNA') || a.startsWith('SRAZKA')) {
-                numA = parseInt(a.replace('KORUNA', '').replace('SRAZKA', ''));
-            } else {
-                numA = parseInt(a.match(/[0-9A-C]+$/)[0].replace('A', '10').replace('B', '11').replace('C', '12'));
-            }
-            if (b.startsWith('KORUNA') || a.startsWith('SRAZKA')) {
-                numB = parseInt(b.replace('KORUNA', '').replace('SRAZKA', ''));
-            } else {
-                numB = parseInt(b.match(/[0-9A-C]+$/)[0].replace('A', '10').replace('B', '11').replace('C', '12'));
-            }
-            return numA - numB;
-        });
+        assetOrder[key].sort();
     }
 
     const sortedAssetNames = [].concat(...Object.values(assetOrder));
@@ -111,8 +98,9 @@ function loadAssets(callback) {
 }
 
 // --- Herní stav ---
-let currentLevel = 1;
-let train = { x: 0, y: 0, dx: 1, dy: 0, path: [], wagons: [], headAsset: null };
+let currentLevel = 0;
+let currentLevelData = [];
+let train = { x: 0, y: 0, dx: 1, dy: 0, requestedDx: 1, requestedDy: 0, path: [], wagons: [], headAsset: null };
 let gameOver = false;
 let score = 0;
 let animationFrame = 0;
@@ -124,21 +112,21 @@ let gateAnimationStartFrame = -1;
 let explosionStartFrame = -1;
 
 function initLevel(levelIndex) {
-    const levelData = levels[levelIndex];
+    currentLevelData = JSON.parse(JSON.stringify(levels[levelIndex]));
     itemsToCollect = 0;
     gateState = 'closed';
     gateAnimationStartFrame = -1;
 
     for (let row = 0; row < MAP_ROWS; row++) {
         for (let col = 0; col < MAP_COLS; col++) {
-            const tile = levelData[row][col];
+            const tile = currentLevelData[row][col];
             if (tile > TILES.VRA) { // Vše kromě zdi a brány je sbíratelné
                 itemsToCollect++;
             }
             if (tile >= TILES.LO1 && tile <= TILES.LOC) {
                 train.x = col;
                 train.y = row;
-                levelData[row][col] = 0;
+                currentLevelData[row][col] = 0;
                 // If the train starts on a collectible tile, decrement itemsToCollect
                 if (tile > TILES.VRA) {
                     itemsToCollect--;
@@ -148,8 +136,10 @@ function initLevel(levelIndex) {
     }
     train.wagons = [];
     train.path = [];
-    train.dx = 0;
-    train.dy = 0;
+    train.dx = 1; // Initial direction right
+    train.dy = 0; // Initial direction right
+    train.requestedDx = 1; // Initial requested direction right
+    train.requestedDy = 0; // Initial requested direction right
     gameOver = false;
     score = 0;
     train.headAsset = assets['LOKOMOT'][2]; // Set initial head asset to right-facing locomotive
@@ -157,25 +147,59 @@ function initLevel(levelIndex) {
 
 // --- Ovládání ---
 document.addEventListener('keydown', e => {
-    if (gameOver) return; // Prevent movement if game is over
+    if (gameOver) {
+        initLevel(currentLevel);
+        gameOver = false;
+        gameStarted = false;
+        return;
+    }
 
-    const oldDx = train.dx;
-    const oldDy = train.dy;
+    const currentDx = train.dx;
+    const currentDy = train.dy;
 
-    if (e.key === 'ArrowUp' && train.dy === 0) { train.dx = 0; train.dy = -1; }
-    else if (e.key === 'ArrowDown' && train.dy === 0) { train.dx = 0; train.dy = 1; }
-    else if (e.key === 'ArrowLeft' && train.dx === 0) { train.dx = -1; train.dy = 0; }
-    else if (e.key === 'ArrowRight' && train.dx === 0) { train.dx = 1; train.dy = 0; }
+    let newRequestedDx = train.requestedDx;
+    let newRequestedDy = train.requestedDy;
 
-    // If direction changed, start the game
-    if (!gameStarted && (train.dx !== oldDx || train.dy !== oldDy)) {
-        gameStarted = true;
+    let directionChanged = false;
+
+    if (e.key === 'ArrowUp') {
+        if (currentDy !== 1) {
+            newRequestedDx = 0;
+            newRequestedDy = -1;
+            directionChanged = true;
+        }
+    } else if (e.key === 'ArrowDown') {
+        if (currentDy !== -1) {
+            newRequestedDx = 0;
+            newRequestedDy = 1;
+            directionChanged = true;
+        }
+    } else if (e.key === 'ArrowLeft') {
+        if (currentDx !== 1) {
+            newRequestedDx = -1;
+            newRequestedDy = 0;
+            directionChanged = true;
+        }
+    } else if (e.key === 'ArrowRight') {
+        if (currentDx !== -1) {
+            newRequestedDx = 1;
+            newRequestedDy = 0;
+            directionChanged = true;
+        }
+    }
+
+    if (directionChanged) {
+        train.requestedDx = newRequestedDx;
+        train.requestedDy = newRequestedDy;
+        if (!gameStarted) {
+            gameStarted = true;
+        }
     }
 });
 
 // --- Vykreslování ---
 function drawMap() {
-    const levelData = levels[currentLevel];
+    const levelData = currentLevelData;
     for (let row = 0; row < MAP_ROWS; row++) {
         for (let col = 0; col < MAP_COLS; col++) {
             const tile = levelData[row][col];
@@ -259,15 +283,40 @@ function drawTrain() {
 }
 
 function drawScore() {
-    ctx.fillStyle = 'white';
-    ctx.font = '48px Arial';
-    ctx.fillText('Score: ' + score, 24, 60);
+    ctx.textAlign = 'left';
+    const scoreText = 'SKORE ';
+    const scoreValue = score;
+
+    ctx.fillStyle = '#90EE90'; // Light green
+    ctx.font = '43.2px Arial';
+    const textWidth = ctx.measureText(scoreText).width;
+    ctx.fillText(scoreText, 24, canvas.height - 20);
+
+    ctx.fillStyle = 'yellow';
+    ctx.fillText(scoreValue, 24 + textWidth, canvas.height - 20);
+}
+
+function drawLevel() {
+    ctx.textAlign = 'right';
+    const levelText = 'SCENA ';
+    const levelValue = currentLevel + 1;
+
+    ctx.fillStyle = '#90EE90'; // Light green
+    ctx.font = '43.2px Arial';
+    const textWidth = ctx.measureText(levelText).width;
+    ctx.fillText(levelText, canvas.width - 70, canvas.height - 20);
+
+    ctx.fillStyle = 'yellow';
+    ctx.fillText(levelValue, canvas.width - 24, canvas.height - 20);
 }
 
 // --- Herní smyčka ---
 function update() {
     if (gameOver) return;
     if (!gameStarted) return; // Stop train movement if game hasn't started
+
+    train.dx = train.requestedDx;
+    train.dy = train.requestedDy;
 
     const lastPos = { x: train.x, y: train.y };
     const nextX = train.x + train.dx;
@@ -279,7 +328,7 @@ function update() {
         return;
     }
 
-    const levelData = levels[currentLevel];
+    const levelData = currentLevelData;
     const nextTile = levelData[nextY][nextX];
 
     // Kolize POUZE se zdí
@@ -317,7 +366,7 @@ function update() {
 
         score += 10;
         itemsToCollect--;
-        levelData[nextY][nextX] = 0;
+        currentLevelData[nextY][nextX] = 0;
 
         if (itemsToCollect === 0 && gateState === 'closed') {
             gateState = 'opening';
@@ -350,7 +399,7 @@ function update() {
 function gameLoop() {
     animationFrame++;
     gameTick++;
-    if (gameTick % 3 === 0) {
+    if (gameTick % 4 === 0) {
         update();
     }
 
@@ -370,6 +419,7 @@ function gameLoop() {
     drawMap();
     drawTrain();
     drawScore();
+    drawLevel();
 
     if (gameOver) {
         ctx.fillStyle = 'white';
@@ -378,7 +428,7 @@ function gameLoop() {
         ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2);
     }
 
-    setTimeout(gameLoop, 1000 / 10); // 10 FPS
+    setTimeout(gameLoop, 1000 / 12); // 10 FPS
 }
 
 function main() {
