@@ -42,12 +42,12 @@ const assetNames = [
     'LOKOMOT1', 'LOKOMOT2', 'LOKOMOT3', 'LOKOMOT4', 'LOKOMOT5', 'LOKOMOT6', 'LOKOMOT7', 'LOKOMOT8', 'LOKOMOT9', 'LOKOMOTA', 'LOKOMOTB', 'LOKOMOTC',
     'PENIZE1', 'PENIZE2', 'PENIZE3', 'PENIZE4', 'PENIZE5', 'PENIZE6', 'PENIZE7',
     'POCITAC1', 'POCITAC2', 'POCITAC3', 'POCITAC4', 'POCITAC5', 'POCITAC6', 'POCITAC7',
-    'RYBNIK1', 'RYBNIK2', 'RYBNIK3',
+    'RYBNIK1', 'RYBNIK2', 'RYBNIK3', 'RYBNIK4', 'RYBNIK5', 'RYBNIK6', 'RYBNIK7', 
     'SLON1', 'SLON2', 'SLON3', 'SLON4', 'SLON5', 'SLON6', 'SLON7',
     'SRAZKA1', 'SRAZKA2', 'SRAZKA3', 'SRAZKA4', 'SRAZKA5', 'SRAZKA6', 'SRAZKA7', 'SRAZKA8', 'SRAZKA9', 'SRAZKAA',
     'STROM1', 'STROM2', 'STROM3', 'STROM4', 'STROM5', 'STROM6', 'STROM7',
     'TITULEK',
-    'TRESNE1', 'TRESNE2', 'TRESNE3',
+    'TRESNE1', 'TRESNE2', 'TRESNE3', 'TRESNE4', 'TRESNE5', 'TRESNE6', 'TRESNE7',
     'VINO1', 'VINO2', 'VINO3', 'VINO4', 'VINO5', 'VINO6', 'VINO7',
     'VRATA1', 'VRATA2', 'VRATA3', 'VRATA4', 'VRATA5', 'VRATA6',
     'ZED',
@@ -107,7 +107,7 @@ function loadAssets(callback) {
 }
 
 // --- Herní stav ---
-let currentLevel = 6;
+let currentLevel = 0;
 let train = { x: 0, y: 0, dx: 1, dy: 0, path: [], wagons: [], headAsset: null };
 let gameOver = false;
 let score = 0;
@@ -205,11 +205,11 @@ function drawTrain() {
             const dx = prevPos.x - currentPos.x;
             const dy = prevPos.y - currentPos.y;
 
-            let assetIndex = 3; // Doprava
-            if (dx === 1) assetIndex = 3;      // Doprava (snímek 4)
-            else if (dx === -1) assetIndex = 5; // Doleva (snímek 6)
-            else if (dy === 1) assetIndex = 4;  // Dolů (snímek 5)
-            else if (dy === -1) assetIndex = 6; // Nahoru (snímek 7)
+            let assetIndex; 
+            if (dx === 1) assetIndex = 5;      // Doprava (index 6)
+            else if (dx === -1) assetIndex = 3; // Doleva (index 4)
+            else if (dy === 1) assetIndex = 6;  // Dolů (index 7)
+            else if (dy === -1) assetIndex = 4; // Nahoru (index 5)
 
             const wagonAssetGroup = assets[wagonType];
             if (wagonAssetGroup && wagonAssetGroup.length > assetIndex) {
