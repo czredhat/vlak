@@ -107,23 +107,22 @@ function loadAssets(callback) {
 }
 
 // --- Herní stav ---
-let currentLevel = 0;
+let currentLevel = 1;
 let train = { x: 0, y: 0, dx: 1, dy: 0, path: [], wagons: [], headAsset: null };
 let gameOver = false;
 let score = 0;
 let animationFrame = 0;
 let itemsToCollect = 0;
-let gateFrame = 0;
-let gateAnimationCounter = 0;
 let gateState = 'closed'; // new: 'closed', 'opening', 'open'
 let gameStarted = false;
+let gameTick = 0;
+let gateAnimationStartFrame = -1;
 
 function initLevel(levelIndex) {
     const levelData = levels[levelIndex];
     itemsToCollect = 0;
-    gateFrame = 0;
-    gateAnimationCounter = 0;
     gateState = 'closed';
+    gateAnimationStartFrame = -1;
 
     for (let row = 0; row < MAP_ROWS; row++) {
         for (let col = 0; col < MAP_COLS; col++) {
@@ -193,11 +192,21 @@ function drawMap() {
             if (assetGroup && assetGroup.length > 0) {
                 let img;
                 if (tile === TILES.VRA) {
-                    img = assetGroup[gateFrame];
+                    if (gateState === 'closed') {
+                        img = assetGroup[0]; // Always show the first frame (closed gate)
+                    } else {
+                        const frameCount = Math.min(assetGroup.length, 6); // VRATA1-VRATA6
+                        const animationProgress = animationFrame - gateAnimationStartFrame;
+                        const frameIndex = Math.min(Math.floor(animationProgress * 2), frameCount - 1);
+                        img = assetGroup[frameIndex];
+                        if (frameIndex === frameCount - 1 && gateState === 'opening') {
+                            gateState = 'open';
+                        }
+                    }
                 } else {
                     // Use first 3 frames for animated items
                     const frameCount = Math.min(assetGroup.length, 3);
-                    const frameIndex = animationFrame % frameCount;
+                    const frameIndex = Math.floor(animationFrame * 2) % frameCount;
                     img = assetGroup[frameIndex];
                 }
                 if (img) {
@@ -292,6 +301,7 @@ function update() {
 
         if (itemsToCollect === 0 && gateState === 'closed') {
             gateState = 'opening';
+            gateAnimationStartFrame = animationFrame;
         }
     }
 
@@ -300,10 +310,7 @@ function update() {
 
     // Handle gate collision
     if (nextTile === TILES.VRA) {
-        if (gateState !== 'open') {
-            gameOver = true; return; // Collision with closed or opening gate
-        } else {
-            // Train can pass through open gate
+        if (itemsToCollect === 0) {
             currentLevel++;
             if (currentLevel >= levels.length) {
                 gameOver = true;
@@ -312,21 +319,18 @@ function update() {
                 initLevel(currentLevel);
             }
             return; // Level changed, so stop further processing for this frame
-        }
-    }
-
-    // Gate animation logic
-    if (gateState === 'opening') {
-        gateFrame++;
-        if (gateFrame >= 5) { // VRATA6 is index 5 (VRATA1 is index 0)
-            gateState = 'open';
+        } else {
+            gameOver = true; return; // Collision with closed gate
         }
     }
 }
 
 function gameLoop() {
     animationFrame++;
-    update();
+    gameTick++;
+    if (gameTick % 3 === 0) {
+        update();
+    }
 
     const frameIndex = animationFrame % 3;
     const lokomotAssets = assets['LOKOMOT'];
@@ -352,7 +356,7 @@ function gameLoop() {
         ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2);
     }
 
-    setTimeout(gameLoop, 1000 / 5); // 5 FPS
+    setTimeout(gameLoop, 1000 / 10); // 10 FPS
 }
 
 function main() {
