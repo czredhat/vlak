@@ -163,25 +163,25 @@ document.addEventListener('keydown', e => {
     let directionChanged = false;
 
     if (e.key === 'ArrowUp') {
-        if (currentDy !== 1) {
+        if (!gameStarted || currentDy !== 1) {
             newRequestedDx = 0;
             newRequestedDy = -1;
             directionChanged = true;
         }
     } else if (e.key === 'ArrowDown') {
-        if (currentDy !== -1) {
+        if (!gameStarted || currentDy !== -1) {
             newRequestedDx = 0;
             newRequestedDy = 1;
             directionChanged = true;
         }
     } else if (e.key === 'ArrowLeft') {
-        if (currentDx !== 1) {
+        if (!gameStarted || currentDx !== 1) {
             newRequestedDx = -1;
             newRequestedDy = 0;
             directionChanged = true;
         }
     } else if (e.key === 'ArrowRight') {
-        if (currentDx !== -1) {
+        if (!gameStarted || currentDx !== -1) {
             newRequestedDx = 1;
             newRequestedDy = 0;
             directionChanged = true;
@@ -299,7 +299,7 @@ function drawScore() {
 function drawLevel() {
     ctx.textAlign = 'right';
     const levelText = 'SCENA ';
-    const levelValue = currentLevel + 1;
+    const levelValue = currentLevel - 1;
 
     ctx.fillStyle = '#90EE90'; // Light green
     ctx.font = '43.2px Arial';
