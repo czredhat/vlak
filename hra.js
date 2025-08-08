@@ -4,6 +4,35 @@ console.log("Hra Vlak se načítá...");
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
+let TILE_SIZE = 48; // Zvětšená velikost dlaždice
+const MAP_COLS = 20;
+const MAP_ROWS = 12;
+const UI_AREA_HEIGHT_RATIO = 80 / 48; // 80px is the default UI height for 48px TILE_SIZE
+
+function isMobileDevice() {
+    return true; // For debugging: always return true
+    // return /Mobi|Android/i.test(navigator.userAgent);
+}
+
+function resizeCanvas() {
+    if (isMobileDevice()) {
+        const widthBasedTileSize = window.innerWidth / MAP_COLS;
+        const heightBasedTileSize = window.innerHeight / (MAP_ROWS + UI_AREA_HEIGHT_RATIO);
+        const newTileSize = Math.floor(Math.min(widthBasedTileSize, heightBasedTileSize));
+        
+        TILE_SIZE = newTileSize > 0 ? newTileSize : 1; // Ensure TILE_SIZE is at least 1
+
+        canvas.width = TILE_SIZE * MAP_COLS;
+        canvas.height = TILE_SIZE * (MAP_ROWS + UI_AREA_HEIGHT_RATIO);
+    } else {
+        TILE_SIZE = 48; // Default desktop size
+        canvas.width = TILE_SIZE * MAP_COLS;
+        canvas.height = (TILE_SIZE * MAP_ROWS) + 80;
+    }
+}
+
+window.addEventListener('resize', resizeCanvas);
+
 const TILES = {
     ZED: 1, VRA: 2, KRY: 3, STO: 4, JAB: 5, KRA: 6, TRE: 7, RYB: 8, ZIR: 9, ZMR: 10,
     DOR: 11, POC: 12, AUT: 13, BAL: 14, BUD: 15, SLO: 16, VIN: 17, PEN: 18, LET: 19,
@@ -12,9 +41,6 @@ const TILES = {
 };
 
 // Zde budou definice velikosti hry a další konstanty
-const TILE_SIZE = 48; // Zvětšená velikost dlaždice
-const MAP_COLS = 20;
-const MAP_ROWS = 12;
 
 canvas.width = TILE_SIZE * MAP_COLS;
 canvas.height = (TILE_SIZE * MAP_ROWS) + 80;
@@ -432,8 +458,25 @@ function gameLoop() {
 }
 
 function main() {
+    resizeCanvas();
     initLevel(currentLevel);
     gameLoop();
+
+    if (isMobileDevice()) {
+        document.getElementById('mobile-controls').style.display = 'block';
+        document.getElementById('up-button').addEventListener('touchstart', () => {
+            document.dispatchEvent(new KeyboardEvent('keydown', {'key':'ArrowUp'}));
+        });
+        document.getElementById('down-button').addEventListener('touchstart', () => {
+            document.dispatchEvent(new KeyboardEvent('keydown', {'key':'ArrowDown'}));
+        });
+        document.getElementById('left-button').addEventListener('touchstart', () => {
+            document.dispatchEvent(new KeyboardEvent('keydown', {'key':'ArrowLeft'}));
+        });
+        document.getElementById('right-button').addEventListener('touchstart', () => {
+            document.dispatchEvent(new KeyboardEvent('keydown', {'key':'ArrowRight'}));
+        });
+    }
 }
 
 loadAssets(main);

@@ -9,18 +9,67 @@
             background-color: #000;
             color: #fff;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
+            overflow: hidden; /* Prevent scrolling on mobile */
         }
         canvas {
             border: 2px solid #fff;
+            display: block; /* Remove extra space below canvas */
+        }
+        #mobile-controls {
+            display: none; /* Hidden by default, shown by JS */
+            text-align: center;
+            margin-top: 10px;
+            width: 100%;
+            max-width: 90%; /* Limit width on larger screens */
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        #mobile-controls button {
+            background-color: #333;
+            color: #fff;
+            border: 2px solid #fff;
+            border-radius: 10px;
+            font-size: 4.5em; /* Increased font size by 50% */
+            padding: 30px 38px; /* Increased padding by 50% */
+            margin: 12px; /* Increased margin by 50% */
+            cursor: pointer;
+            touch-action: manipulation; /* Prevent double-tap zoom */
+            flex-grow: 1;
+        }
+        #mobile-controls .d-pad-row {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+        #mobile-controls #up-button,
+        #mobile-controls #down-button {
+            width: calc(33.33% - 4px); /* Adjusted width for even larger size */
+            min-height: 220px; /* Increased minimum height */
+        }
+        #mobile-controls #left-button,
+        #mobile-controls #right-button {
+            width: calc(33.33% - 4px); /* Adjusted width for even larger size */
+            min-height: 220px; /* Increased minimum height */
         }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
+    <div id="mobile-controls">
+        <div class="d-pad-row">
+            <button id="up-button">↑</button>
+        </div>
+        <div class="d-pad-row">
+            <button id="left-button">←</button>
+            <button id="down-button">↓</button>
+            <button id="right-button">→</button>
+        </div>
+    </div>
     <script src="levels.js"></script>
     <script src="hra.js"></script>
 </body>
